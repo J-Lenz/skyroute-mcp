@@ -40,7 +40,7 @@ npm start
 
 ## Environment
 
-See [.env.example](/Users/julianlenz/Documents/Skyroute/.env.example).
+See `.env.example`.
 
 Key vars:
 
@@ -54,6 +54,46 @@ Key vars:
 
 - SSE: `GET /sse`
 - Messages: `POST /messages?sessionId=<id>`
+
+Production endpoint example:
+
+- `https://skyroute-mcp-production.up.railway.app/sse`
+
+## Connect From Other Machines
+
+Anyone can connect if they can reach your public Railway URL.
+
+Use this MCP endpoint:
+
+- `https://skyroute-mcp-production.up.railway.app/sse`
+
+Important:
+
+- `localhost` only works on your own device.
+- Other devices must use your public HTTPS URL.
+- This v0 has no auth yet, so treat the endpoint as public.
+
+### Claude Desktop
+
+1. Open Claude Desktop.
+2. Go to `Settings -> Connectors`.
+3. Add a custom remote MCP server.
+4. Set URL to `https://skyroute-mcp-production.up.railway.app/sse`.
+5. Save and reconnect.
+
+### OpenClaw
+
+Use `mcporter` with the same remote URL:
+
+```bash
+npx mcporter config add skyroute https://skyroute-mcp-production.up.railway.app/sse --transport sse --scope home
+```
+
+Then verify tools:
+
+```bash
+npx mcporter list skyroute --schema
+```
 
 ## Tool Contracts
 
