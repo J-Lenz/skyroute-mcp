@@ -12,10 +12,14 @@ export interface AppConfig {
   mcpBaseUrl: string;
   provider: "mock" | "duffel";
   duffelApiKey: string;
+  duffelEnv: "sandbox" | "live";
+  duffelBaseUrl: string;
   defaultCurrency: string;
   defaultLocale: string;
   defaultMaxResults: number;
   offerCacheTtlMs: number;
+  rateLimitWindowMs: number;
+  rateLimitMaxRequests: number;
 }
 
 export function loadConfig(): AppConfig {
@@ -24,9 +28,13 @@ export function loadConfig(): AppConfig {
     mcpBaseUrl: process.env.MCP_BASE_URL ?? "http://localhost:3000",
     provider: process.env.FLIGHT_PROVIDER === "duffel" ? "duffel" : "mock",
     duffelApiKey: process.env.DUFFEL_API_KEY ?? "",
+    duffelEnv: process.env.DUFFEL_ENV === "live" ? "live" : "sandbox",
+    duffelBaseUrl: process.env.DUFFEL_BASE_URL ?? "https://api.duffel.com",
     defaultCurrency: process.env.DEFAULT_CURRENCY ?? "USD",
     defaultLocale: process.env.DEFAULT_LOCALE ?? "en-US",
     defaultMaxResults: parseNumber(process.env.DEFAULT_MAX_RESULTS, 20),
-    offerCacheTtlMs: parseNumber(process.env.OFFER_CACHE_TTL_MS, 30 * 60 * 1000)
+    offerCacheTtlMs: parseNumber(process.env.OFFER_CACHE_TTL_MS, 30 * 60 * 1000),
+    rateLimitWindowMs: parseNumber(process.env.RATE_LIMIT_WINDOW_MS, 60_000),
+    rateLimitMaxRequests: parseNumber(process.env.RATE_LIMIT_MAX_REQUESTS, 300)
   };
 }

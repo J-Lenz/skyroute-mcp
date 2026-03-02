@@ -20,7 +20,8 @@ import {
 export interface SearchFlightsRequest {
   origin: string;
   destination: string;
-  departure_date: string;
+  departure_date?: string;
+  date?: string;
   return_date?: string;
   adults?: number;
   children?: number;
@@ -50,7 +51,10 @@ export class SkyRouteService {
   constructor(config: AppConfig) {
     this.config = config;
     this.cache = new OfferCache(config.offerCacheTtlMs);
-    this.provider = config.provider === "duffel" ? new DuffelFlightProvider(config.duffelApiKey) : new MockFlightProvider();
+    this.provider =
+      config.provider === "duffel"
+        ? new DuffelFlightProvider({ apiKey: config.duffelApiKey, baseUrl: config.duffelBaseUrl })
+        : new MockFlightProvider();
   }
 
   getMeta(): { provider: string; supportedAirports: number; cacheTtlMs: number } {
@@ -82,9 +86,10 @@ export class SkyRouteService {
       notes.push(destinationResult.note);
     }
 
-    const departureDate = toIsoDate(request.departure_date);
+    const departureInput = request.departure_date ?? request.date;
+    const departureDate = departureInput ? toIsoDate(departureInput) : undefined;
     if (!departureDate) {
-      throw new Error("Unable to parse departure_date. Use an ISO date or natural phrase like 'next Friday'.");
+      throw new Error("Unable to parse departure_date (or date alias). Use an ISO date or natural phrase like 'next Friday'.");
     }
 
     const returnDate = request.return_date ? toIsoDate(request.return_date) : undefined;

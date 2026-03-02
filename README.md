@@ -16,6 +16,7 @@ This repo is mock-first and Duffel-ready.
 - Offer cache for details and booking follow-ups
 - Redirect-only booking handoff
 - MCP over SSE transport for remote hosting
+- IP-based request rate limiting for public endpoint protection
 
 ## Quick Start
 
@@ -46,9 +47,12 @@ Key vars:
 
 - `FLIGHT_PROVIDER=mock|duffel`
 - `DUFFEL_API_KEY` (required when provider is `duffel`)
+- `DUFFEL_BASE_URL` (default `https://api.duffel.com`)
 - `DEFAULT_CURRENCY` (default `USD`)
 - `DEFAULT_LOCALE` (default `en-US`)
 - `DEFAULT_MAX_RESULTS` (default `20`)
+- `RATE_LIMIT_WINDOW_MS` (default `60000`)
+- `RATE_LIMIT_MAX_REQUESTS` (default `300`)
 
 ## MCP Endpoints
 
@@ -57,7 +61,7 @@ Key vars:
 
 Production endpoint example:
 
-- `https://skyroute-mcp-production.up.railway.app/sse`
+- `https://mcp.skyroute.dev/sse`
 
 ## Connect From Other Machines
 
@@ -65,7 +69,7 @@ Anyone can connect if they can reach your public Railway URL.
 
 Use this MCP endpoint:
 
-- `https://skyroute-mcp-production.up.railway.app/sse`
+- `https://mcp.skyroute.dev/sse`
 
 Important:
 
@@ -78,7 +82,7 @@ Important:
 1. Open Claude Desktop.
 2. Go to `Settings -> Connectors`.
 3. Add a custom remote MCP server.
-4. Set URL to `https://skyroute-mcp-production.up.railway.app/sse`.
+4. Set URL to `https://mcp.skyroute.dev/sse`.
 5. Save and reconnect.
 
 ### OpenClaw
@@ -86,7 +90,7 @@ Important:
 Use `mcporter` with the same remote URL:
 
 ```bash
-npx mcporter config add skyroute https://skyroute-mcp-production.up.railway.app/sse --transport sse --scope home
+npx mcporter config add skyroute https://mcp.skyroute.dev/sse --transport sse --scope home
 ```
 
 Then verify tools:
@@ -104,6 +108,7 @@ Input:
 - `origin` (city or IATA)
 - `destination` (city or IATA)
 - `departure_date` (natural or ISO)
+- `date` (alias for `departure_date`, optional)
 - `return_date` (optional)
 - `adults`, `children`, `infants` (optional)
 - `cabin_class` (`economy|premium_economy|business|first`, optional)
@@ -172,13 +177,12 @@ User: "Show only cheapest options"
 
 ## Current Limitations
 
-- `DuffelFlightProvider` is currently a stub; mock provider is fully functional.
-- No auth/rate limiting yet.
+- No auth yet (rate limiting is enabled).
 - No in-chat payment collection.
 
 ## Next Step
 
-Wire `DuffelFlightProvider` to `offer_requests`/`offers` while keeping tool schemas unchanged.
+Switch `FLIGHT_PROVIDER=duffel` and set `DUFFEL_API_KEY` to run live Duffel sandbox searches with the existing tool schemas.
 
 ## License
 

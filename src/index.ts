@@ -3,6 +3,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { z } from "zod";
 import { loadConfig } from "./config";
+import { createIpRateLimiter } from "./middleware/rateLimit";
 import { SkyRouteService } from "./skyroute";
 
 const config = loadConfig();
@@ -48,7 +49,8 @@ function createServer(): McpServer {
     {
       origin: z.string().min(2).describe("Origin city or airport code, e.g. 'SFO' or 'San Francisco'."),
       destination: z.string().min(2).describe("Destination city or airport code, e.g. 'LIS' or 'Lisbon'."),
-      departure_date: z.string().min(2).describe("Departure date in natural language or ISO format."),
+      departure_date: z.string().min(2).optional().describe("Departure date in natural language or ISO format."),
+      date: z.string().min(2).optional().describe("Alias for departure_date (for compatibility)."),
       return_date: z.string().optional().describe("Optional return date in natural language or ISO format."),
       adults: z.number().int().min(1).max(9).optional().describe("Number of adult passengers. Default 1."),
       children: z.number().int().min(0).max(8).optional().describe("Number of child passengers. Default 0."),
@@ -114,6 +116,14 @@ function createServer(): McpServer {
 const app = express();
 const transports: Record<string, { transport: SSEServerTransport; server: McpServer }> = {};
 app.use(express.json());
+app.set("trust proxy", true);
+
+const rateLimiter = createIpRateLimiter({
+  windowMs: config.rateLimitWindowMs,
+  maxRequests: config.rateLimitMaxRequests
+});
+app.use("/sse", rateLimiter);
+app.use("/messages", rateLimiter);
 
 app.get("/health", (_req, res) => {
   res.json({
