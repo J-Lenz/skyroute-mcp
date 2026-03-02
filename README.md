@@ -6,7 +6,13 @@ SkyRoute is a personal MCP server for flight workflows with three tools:
 - `get_flight_details`
 - `book_flight`
 
-This repo is mock-first and Duffel-ready.
+SkyRoute supports both `mock` and `duffel` providers.
+
+## Live Status
+
+- Public MCP endpoint: `https://mcp.skyroute.dev/sse`
+- Current production provider: `duffel` (sandbox)
+- Transport: SSE (`/sse` + `/messages`)
 
 ## What Works In v0
 
@@ -47,7 +53,9 @@ Key vars:
 
 - `FLIGHT_PROVIDER=mock|duffel`
 - `DUFFEL_API_KEY` (required when provider is `duffel`)
+- `DUFFEL_ENV=sandbox|live`
 - `DUFFEL_BASE_URL` (default `https://api.duffel.com`)
+- `MCP_BASE_URL` (set this to your deployed domain in production)
 - `DEFAULT_CURRENCY` (default `USD`)
 - `DEFAULT_LOCALE` (default `en-US`)
 - `DEFAULT_MAX_RESULTS` (default `20`)
@@ -175,14 +183,29 @@ User: "Show only cheapest options"
 4. Deploy.
 5. Use `https://<your-domain>/sse` as MCP endpoint.
 
+### Railway Production Variables (example)
+
+- `MCP_BASE_URL=https://mcp.skyroute.dev`
+- `FLIGHT_PROVIDER=duffel`
+- `DUFFEL_API_KEY=<your key>`
+- `DUFFEL_ENV=sandbox`
+- `DUFFEL_BASE_URL=https://api.duffel.com`
+- `DEFAULT_CURRENCY=USD`
+- `DEFAULT_LOCALE=en-US`
+- `DEFAULT_MAX_RESULTS=20`
+- `OFFER_CACHE_TTL_MS=1800000`
+- `RATE_LIMIT_WINDOW_MS=60000`
+- `RATE_LIMIT_MAX_REQUESTS=300`
+
 ## Current Limitations
 
 - No auth yet (rate limiting is enabled).
 - No in-chat payment collection.
+- `book_flight` is redirect-only (no ticketing/payment execution in MCP yet).
 
 ## Next Step
 
-Switch `FLIGHT_PROVIDER=duffel` and set `DUFFEL_API_KEY` to run live Duffel sandbox searches with the existing tool schemas.
+Move from sandbox to live supplier flow (pricing controls, checkout, and order servicing).
 
 ## License
 
