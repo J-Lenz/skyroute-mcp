@@ -43,6 +43,10 @@ interface DuffelOffer {
       };
       marketing_carrier_flight_number?: string;
       operating_carrier_flight_number?: string;
+      passengers?: Array<{
+        cabin_class?: string;
+        cabin_class_marketing_name?: string;
+      }>;
     }>;
   }>;
   conditions?: DuffelConditions;
@@ -267,6 +271,7 @@ export class DuffelFlightProvider implements FlightProvider {
     const flightNumber = `${airlineCode}${flightNumberSuffix}`.trim() || "N/A";
 
     const bookingRedirectUrl = this.buildBookingRedirectUrl(input);
+    const cabinClass = this.extractCabinClass(firstSegment, input.cabinClass);
 
     return {
       offerId: offer.id,
@@ -280,7 +285,7 @@ export class DuffelFlightProvider implements FlightProvider {
       arrivalAt,
       durationMinutes,
       stops: Math.max(0, segments.length - 1),
-      cabinClass: input.cabinClass,
+      cabinClass,
       price: {
         amount: amount,
         currency: offer.total_currency ?? input.currency
@@ -294,6 +299,23 @@ export class DuffelFlightProvider implements FlightProvider {
       bookingRedirectUrl,
       raw: offer
     };
+  }
+
+  private extractCabinClass(
+    segment: { passengers?: Array<{ cabin_class?: string }> } | undefined,
+    fallback: NormalizedSearchInput["cabinClass"]
+  ): NormalizedSearchInput["cabinClass"] {
+    const rawCabin = segment?.passengers?.[0]?.cabin_class;
+    if (!rawCabin) {
+      return fallback;
+    }
+
+    const normalized = rawCabin.toLowerCase().replace(/[\s-]/g, "_");
+    if (normalized === "economy" || normalized === "premium_economy" || normalized === "business" || normalized === "first") {
+      return normalized;
+    }
+
+    return fallback;
   }
 
   private inferFareType(conditions: DuffelConditions | undefined): string {

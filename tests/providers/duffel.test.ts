@@ -41,7 +41,8 @@ function makeDuffelOffer(overrides: any = {}) {
             departing_at: "2025-06-15T08:00:00",
             arriving_at: "2025-06-15T18:30:00",
             marketing_carrier: { iata_code: "TP", name: "TAP Air Portugal" },
-            marketing_carrier_flight_number: "202"
+            marketing_carrier_flight_number: "202",
+            passengers: [{ cabin_class: "economy", cabin_class_marketing_name: "Economy" }]
           }
         ]
       }
@@ -95,6 +96,31 @@ describe("DuffelFlightProvider", () => {
       expect(offer.durationMinutes).toBe(630);
       expect(offer.stops).toBe(0);
       expect(offer.fareType).toBe("standard");
+      expect(offer.cabinClass).toBe("economy");
+    });
+
+    it("extracts cabin class from Duffel response, not from input", async () => {
+      const provider = new DuffelFlightProvider({ apiKey: "duffel_test_abc", baseUrl: "https://api.duffel.com" });
+      const businessOffer = makeDuffelOffer({
+        slices: [
+          {
+            duration: "PT10H30M",
+            segments: [
+              {
+                departing_at: "2025-06-15T08:00:00",
+                arriving_at: "2025-06-15T18:30:00",
+                marketing_carrier: { iata_code: "TP", name: "TAP Air Portugal" },
+                marketing_carrier_flight_number: "202",
+                passengers: [{ cabin_class: "business", cabin_class_marketing_name: "Business" }]
+              }
+            ]
+          }
+        ]
+      });
+      fetchSpy.mockResolvedValue(makeDuffelOfferResponse([businessOffer]) as any);
+
+      const offers = await provider.searchFlights(makeInput({ cabinClass: "economy" }));
+      expect(offers[0].cabinClass).toBe("business");
     });
 
     it("returns empty array when no offers", async () => {
