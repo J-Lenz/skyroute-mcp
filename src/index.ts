@@ -95,9 +95,9 @@ function createServer(): McpServer {
   registerToolCompat(
     "book_flight",
     [
-      "Return a booking redirect URL for the selected offer.",
+      "Create a checkout session and return the booking URL for the selected offer.",
       "Call this only after search_flights with a valid search_id and offer_id.",
-      "This v0 does not process payment inside MCP; it redirects to supplier checkout."
+      "Creates a Duffel checkout session and returns the booking URL. Open the URL to complete payment on Duffel's hosted checkout page."
     ].join(" "),
     {
       search_id: z.string().min(5).describe("ID returned by search_flights."),

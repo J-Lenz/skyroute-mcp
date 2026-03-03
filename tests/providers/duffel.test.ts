@@ -228,4 +228,91 @@ describe("DuffelFlightProvider", () => {
       expect(conditions.cancellation).toContain("allowed");
     });
   });
+
+  describe("createBookingSession", () => {
+    const linksConfig = {
+      successUrl: "https://skyroute.dev/booking/success",
+      failureUrl: "https://skyroute.dev/booking/failure",
+      abandonmentUrl: "https://skyroute.dev/booking/abandoned"
+    };
+
+    it("creates a Duffel Links session and returns URL", async () => {
+      const provider = new DuffelFlightProvider({
+        apiKey: "duffel_test_abc",
+        baseUrl: "https://api.duffel.com",
+        linksConfig
+      });
+
+      fetchSpy.mockResolvedValue({
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            data: {
+              id: "lin_sess_test_123",
+              url: "https://links.duffel.com?token=abc123",
+              expires_at: "2025-06-16T12:00:00Z"
+            }
+          })
+      } as any);
+
+      const session = await provider.createBookingSession({
+        offerId: "off_test_123",
+        raw: { id: "off_test_123" }
+      } as any);
+
+      expect(session.url).toBe("https://links.duffel.com?token=abc123");
+      expect(session.expiresAt).toBe("2025-06-16T12:00:00Z");
+    });
+
+    it("throws when linksConfig is not provided", async () => {
+      const provider = new DuffelFlightProvider({
+        apiKey: "duffel_test_abc",
+        baseUrl: "https://api.duffel.com"
+      });
+
+      await expect(
+        provider.createBookingSession({
+          offerId: "off_test_123",
+          raw: { id: "off_test_123" }
+        } as any)
+      ).rejects.toThrow("not configured");
+    });
+
+    it("throws when no Duffel offer ID can be extracted", async () => {
+      const provider = new DuffelFlightProvider({
+        apiKey: "duffel_test_abc",
+        baseUrl: "https://api.duffel.com",
+        linksConfig
+      });
+
+      await expect(
+        provider.createBookingSession({
+          offerId: "local_id_no_duffel",
+          raw: {}
+        } as any)
+      ).rejects.toThrow("no valid Duffel offer ID");
+    });
+
+    it("throws on API error", async () => {
+      const provider = new DuffelFlightProvider({
+        apiKey: "duffel_test_abc",
+        baseUrl: "https://api.duffel.com",
+        linksConfig
+      });
+
+      fetchSpy.mockResolvedValue({
+        ok: false,
+        status: 422,
+        text: async () => JSON.stringify({ errors: [{ message: "Offer expired" }] })
+      } as any);
+
+      await expect(
+        provider.createBookingSession({
+          offerId: "off_test_123",
+          raw: { id: "off_test_123" }
+        } as any)
+      ).rejects.toThrow("Duffel API error (422)");
+    });
+  });
 });

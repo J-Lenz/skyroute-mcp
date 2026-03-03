@@ -16,6 +16,9 @@ function makeConfig(overrides?: Partial<AppConfig>): AppConfig {
     offerCacheTtlMs: 30 * 60 * 1000,
     rateLimitWindowMs: 60_000,
     rateLimitMaxRequests: 300,
+    duffelLinksSuccessUrl: "https://skyroute.dev/booking/success",
+    duffelLinksFailureUrl: "https://skyroute.dev/booking/failure",
+    duffelLinksAbandonmentUrl: "https://skyroute.dev/booking/abandoned",
     ...overrides
   };
 }
@@ -153,7 +156,7 @@ describe("SkyRouteService", () => {
   });
 
   describe("bookFlight", () => {
-    it("returns a booking redirect", async () => {
+    it("returns a booking session URL from the provider", async () => {
       const search = await service.searchFlights({
         origin: "SFO",
         destination: "LIS",
@@ -166,9 +169,9 @@ describe("SkyRouteService", () => {
       });
 
       expect(booking.offerId).toBe(search.offers[0].offerId);
-      expect(booking.bookingRedirectUrl).toBeDefined();
+      expect(booking.bookingRedirectUrl).toContain("links.duffel.com/mock");
       expect(booking.provider).toBe("mock");
-      expect(booking.message).toContain("redirect");
+      expect(booking.message).toContain("checkout");
     });
 
     it("throws for unknown search ID", async () => {

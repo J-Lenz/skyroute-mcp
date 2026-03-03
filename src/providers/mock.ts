@@ -1,4 +1,4 @@
-import { FlightOffer, FlightProvider, NormalizedSearchInput } from "../types";
+import { BookingSession, FlightOffer, FlightProvider, NormalizedSearchInput } from "../types";
 import { combineDateAndMinutes } from "../services/dates";
 import { stableId } from "../services/id";
 
@@ -115,6 +115,13 @@ export class MockFlightProvider implements FlightProvider {
     });
 
     return offers.slice(0, input.maxResults);
+  }
+
+  async createBookingSession(offer: FlightOffer): Promise<BookingSession> {
+    return {
+      url: `https://links.duffel.com/mock?offer=${offer.offerId}`,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+    };
   }
 
   async getConditions(offer: FlightOffer): Promise<{ cancellation: string; changes: string; noShow: string }> {

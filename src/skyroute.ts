@@ -53,7 +53,15 @@ export class SkyRouteService {
     this.cache = new OfferCache(config.offerCacheTtlMs);
     this.provider =
       config.provider === "duffel"
-        ? new DuffelFlightProvider({ apiKey: config.duffelApiKey, baseUrl: config.duffelBaseUrl })
+        ? new DuffelFlightProvider({
+            apiKey: config.duffelApiKey,
+            baseUrl: config.duffelBaseUrl,
+            linksConfig: {
+              successUrl: config.duffelLinksSuccessUrl,
+              failureUrl: config.duffelLinksFailureUrl,
+              abandonmentUrl: config.duffelLinksAbandonmentUrl
+            }
+          })
         : new MockFlightProvider();
   }
 
@@ -220,13 +228,29 @@ export class SkyRouteService {
   async bookFlight(request: BookFlightRequest): Promise<BookingRedirect> {
     const offer = this.mustGetOffer(request.search_id, request.offer_id);
 
+    let bookingUrl = offer.bookingRedirectUrl;
+    let message: string;
+
+    if (this.provider.createBookingSession) {
+      try {
+        const session = await this.provider.createBookingSession(offer);
+        bookingUrl = session.url;
+        message = "Open the checkout URL to complete your booking. The session is valid for 20 minutes after you open it.";
+      } catch (err: any) {
+        console.error(`[skyroute] Failed to create booking session: ${err?.message ?? err}`);
+        message = "Could not create a direct checkout session. Use the fallback redirect URL to search and book on the airline website.";
+      }
+    } else {
+      message = "Use the redirect URL to complete checkout with the supplier.";
+    }
+
     return {
       searchId: request.search_id,
       offerId: offer.offerId,
-      bookingRedirectUrl: offer.bookingRedirectUrl,
+      bookingRedirectUrl: bookingUrl,
       provider: offer.provider,
-      message: "Use the redirect URL to complete checkout with the supplier. Payment is not processed inside MCP in this v0.",
-      nextActions: ["open bookingRedirectUrl", "search_flights (if you want alternatives)"]
+      message,
+      nextActions: ["open bookingRedirectUrl in browser", "search_flights (if you want alternatives)"]
     };
   }
 

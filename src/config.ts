@@ -21,6 +21,9 @@ export interface AppConfig {
   offerCacheTtlMs: number;
   rateLimitWindowMs: number;
   rateLimitMaxRequests: number;
+  duffelLinksSuccessUrl: string;
+  duffelLinksFailureUrl: string;
+  duffelLinksAbandonmentUrl: string;
 }
 
 export function validateConfig(config: AppConfig): void {
@@ -58,6 +61,9 @@ export function loadConfig(): AppConfig {
     defaultMaxResults: parseNumber(process.env.DEFAULT_MAX_RESULTS, 20),
     offerCacheTtlMs: parseNumber(process.env.OFFER_CACHE_TTL_MS, 30 * 60 * 1000),
     rateLimitWindowMs: parseNumber(process.env.RATE_LIMIT_WINDOW_MS, 60_000),
-    rateLimitMaxRequests: parseNumber(process.env.RATE_LIMIT_MAX_REQUESTS, 300)
+    rateLimitMaxRequests: parseNumber(process.env.RATE_LIMIT_MAX_REQUESTS, 300),
+    duffelLinksSuccessUrl: process.env.DUFFEL_LINKS_SUCCESS_URL ?? "https://skyroute.dev/booking/success",
+    duffelLinksFailureUrl: process.env.DUFFEL_LINKS_FAILURE_URL ?? "https://skyroute.dev/booking/failure",
+    duffelLinksAbandonmentUrl: process.env.DUFFEL_LINKS_ABANDONMENT_URL ?? "https://skyroute.dev/booking/abandoned"
   };
 }

@@ -115,8 +115,14 @@ export interface BookingRedirect {
   nextActions: string[];
 }
 
+export interface BookingSession {
+  url: string;
+  expiresAt?: string;
+}
+
 export interface FlightProvider {
   name: "mock" | "duffel";
   searchFlights(input: NormalizedSearchInput): Promise<FlightOffer[]>;
   getConditions(offer: FlightOffer): Promise<FlightDetails["conditions"]>;
+  createBookingSession?(offer: FlightOffer): Promise<BookingSession>;
 }

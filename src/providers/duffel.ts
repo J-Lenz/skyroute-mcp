@@ -1,8 +1,15 @@
-import { FlightDetails, FlightOffer, FlightProvider, NormalizedSearchInput } from "../types";
+import { BookingSession, FlightDetails, FlightOffer, FlightProvider, NormalizedSearchInput } from "../types";
+
+export interface DuffelLinksConfig {
+  successUrl: string;
+  failureUrl: string;
+  abandonmentUrl: string;
+}
 
 interface DuffelProviderOptions {
   apiKey: string;
   baseUrl: string;
+  linksConfig?: DuffelLinksConfig;
 }
 
 interface DuffelOfferRequestResponse {
@@ -53,6 +60,7 @@ export class DuffelFlightProvider implements FlightProvider {
   name: "duffel" = "duffel";
   private readonly apiKey: string;
   private readonly baseUrl: string;
+  private readonly linksConfig?: DuffelLinksConfig;
 
   constructor(options: DuffelProviderOptions) {
     if (!options.apiKey) {
@@ -61,6 +69,7 @@ export class DuffelFlightProvider implements FlightProvider {
 
     this.apiKey = options.apiKey;
     this.baseUrl = options.baseUrl.replace(/\/$/, "");
+    this.linksConfig = options.linksConfig;
   }
 
   async searchFlights(input: NormalizedSearchInput): Promise<FlightOffer[]> {
@@ -105,6 +114,35 @@ export class DuffelFlightProvider implements FlightProvider {
     } catch {
       return this.mapConditions((offer.raw as any)?.conditions);
     }
+  }
+
+  async createBookingSession(offer: FlightOffer): Promise<BookingSession> {
+    if (!this.linksConfig) {
+      throw new Error("Duffel Links is not configured. Set DUFFEL_LINKS_SUCCESS_URL and related env vars.");
+    }
+
+    const offerId = this.extractDuffelOfferId(offer);
+    if (!offerId) {
+      throw new Error("Cannot create booking session: no valid Duffel offer ID found.");
+    }
+
+    const session = await this.request<{ id: string; url: string; expires_at?: string }>(
+      "POST",
+      "/links/sessions",
+      {
+        data: {
+          reference: `skyroute_${offerId}`,
+          success_url: this.linksConfig.successUrl,
+          failure_url: this.linksConfig.failureUrl,
+          abandonment_url: this.linksConfig.abandonmentUrl
+        }
+      }
+    );
+
+    return {
+      url: session.url,
+      expiresAt: session.expires_at
+    };
   }
 
   private async request<T>(method: "GET" | "POST", path: string, body?: unknown): Promise<T> {

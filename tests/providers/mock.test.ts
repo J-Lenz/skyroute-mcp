@@ -68,6 +68,18 @@ describe("MockFlightProvider", () => {
     expect(offer.bookingRedirectUrl).toBeDefined();
   });
 
+  describe("createBookingSession", () => {
+    it("returns a mock booking session URL", async () => {
+      const session = await provider.createBookingSession({
+        offerId: "offer_test_123"
+      } as any);
+
+      expect(session.url).toContain("links.duffel.com/mock");
+      expect(session.url).toContain("offer_test_123");
+      expect(session.expiresAt).toBeDefined();
+    });
+  });
+
   describe("getConditions", () => {
     it("returns flexible conditions", async () => {
       const conditions = await provider.getConditions({

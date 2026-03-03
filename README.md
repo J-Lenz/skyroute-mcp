@@ -11,7 +11,7 @@ SkyRoute supports both `mock` and `duffel` providers.
 ## Live Status
 
 - Public MCP endpoint: `https://mcp.skyroute.dev/sse`
-- Current production provider: `duffel` (sandbox)
+- Current production provider: `duffel` (live)
 - Transport: SSE (`/sse` + `/messages`)
 
 ## What Works In v0
@@ -20,7 +20,7 @@ SkyRoute supports both `mock` and `duffel` providers.
 - Fuzzy airport matching (`Lisbon` -> `LIS`)
 - Normalized, ranked offers (`cheapest`, `fastest`, `best`)
 - Offer cache for details and booking follow-ups
-- Redirect-only booking handoff
+- Duffel Links checkout sessions for booking
 - MCP over SSE transport for remote hosting
 - IP-based request rate limiting for public endpoint protection
 
@@ -62,6 +62,9 @@ Key vars:
 - `DEFAULT_MAX_RESULTS` (default `20`)
 - `RATE_LIMIT_WINDOW_MS` (default `60000`)
 - `RATE_LIMIT_MAX_REQUESTS` (default `300`)
+- `DUFFEL_LINKS_SUCCESS_URL` (default `https://skyroute.dev/booking/success`)
+- `DUFFEL_LINKS_FAILURE_URL` (default `https://skyroute.dev/booking/failure`)
+- `DUFFEL_LINKS_ABANDONMENT_URL` (default `https://skyroute.dev/booking/abandoned`)
 
 ## MCP Endpoints
 
@@ -150,8 +153,8 @@ Input:
 - `offer_id`
 
 Output includes:
-- `bookingRedirectUrl`
-- guidance that checkout happens outside MCP
+- `bookingRedirectUrl` (Duffel checkout session URL)
+- Guidance message about completing checkout on Duffel's hosted page
 
 ## Example Interaction Recipes
 
@@ -211,11 +214,11 @@ User: "Show only cheapest options"
 ## Current Limitations
 
 - No in-chat payment collection.
-- `book_flight` is redirect-only (redirects to Google Flights; no direct booking in MCP yet).
+- `book_flight` creates a Duffel Links checkout session. Payment is completed on Duffel's hosted page, not inside MCP.
 
 ## Next Step
 
-Move to direct booking via Duffel order creation (pricing controls, checkout, and order servicing).
+Move to direct booking via Duffel order creation with full pricing controls and order servicing.
 
 ## License
 
