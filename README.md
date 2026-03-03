@@ -52,9 +52,10 @@ See `.env.example`.
 Key vars:
 
 - `FLIGHT_PROVIDER=mock|duffel`
-- `DUFFEL_API_KEY` (required when provider is `duffel`)
-- `DUFFEL_ENV=sandbox|live`
+- `DUFFEL_API_KEY` (required when provider is `duffel`; key prefix determines env: `duffel_test_` = sandbox, `duffel_live_` = live)
+- `DUFFEL_ENV=sandbox|live` (safety label; should match your key prefix)
 - `DUFFEL_BASE_URL` (default `https://api.duffel.com`)
+- `API_KEY` (bearer token for auth; leave empty to disable)
 - `MCP_BASE_URL` (set this to your deployed domain in production)
 - `DEFAULT_CURRENCY` (default `USD`)
 - `DEFAULT_LOCALE` (default `en-US`)
@@ -83,7 +84,7 @@ Important:
 
 - `localhost` only works on your own device.
 - Other devices must use your public HTTPS URL.
-- This v0 has no auth yet, so treat the endpoint as public.
+- If `API_KEY` is set, clients must include `Authorization: Bearer <key>` in their requests.
 
 ### Claude Desktop
 
@@ -91,7 +92,8 @@ Important:
 2. Go to `Settings -> Connectors`.
 3. Add a custom remote MCP server.
 4. Set URL to `https://mcp.skyroute.dev/sse`.
-5. Save and reconnect.
+5. If auth is enabled, add the `Authorization: Bearer <key>` header.
+6. Save and reconnect.
 
 ### OpenClaw
 
@@ -188,8 +190,9 @@ User: "Show only cheapest options"
 - `MCP_BASE_URL=https://mcp.skyroute.dev`
 - `FLIGHT_PROVIDER=duffel`
 - `DUFFEL_API_KEY=<your key>`
-- `DUFFEL_ENV=sandbox`
+- `DUFFEL_ENV=sandbox` (or `live` with a live key)
 - `DUFFEL_BASE_URL=https://api.duffel.com`
+- `API_KEY=<your secret token>`
 - `DEFAULT_CURRENCY=USD`
 - `DEFAULT_LOCALE=en-US`
 - `DEFAULT_MAX_RESULTS=20`
@@ -197,15 +200,22 @@ User: "Show only cheapest options"
 - `RATE_LIMIT_WINDOW_MS=60000`
 - `RATE_LIMIT_MAX_REQUESTS=300`
 
+### Go Live with Duffel
+
+1. Get a live API key from your Duffel dashboard (starts with `duffel_live_`).
+2. Set `DUFFEL_API_KEY` to the live key in Railway env vars.
+3. Set `DUFFEL_ENV=live` in Railway env vars.
+4. Set `API_KEY` to a secure token to protect the endpoint.
+5. Redeploy.
+
 ## Current Limitations
 
-- No auth yet (rate limiting is enabled).
 - No in-chat payment collection.
-- `book_flight` is redirect-only (no ticketing/payment execution in MCP yet).
+- `book_flight` is redirect-only (redirects to Google Flights; no direct booking in MCP yet).
 
 ## Next Step
 
-Move from sandbox to live supplier flow (pricing controls, checkout, and order servicing).
+Move to direct booking via Duffel order creation (pricing controls, checkout, and order servicing).
 
 ## License
 

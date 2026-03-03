@@ -14,12 +14,34 @@ export interface AppConfig {
   duffelApiKey: string;
   duffelEnv: "sandbox" | "live";
   duffelBaseUrl: string;
+  apiKey: string;
   defaultCurrency: string;
   defaultLocale: string;
   defaultMaxResults: number;
   offerCacheTtlMs: number;
   rateLimitWindowMs: number;
   rateLimitMaxRequests: number;
+}
+
+export function validateConfig(config: AppConfig): void {
+  if (config.provider !== "duffel") {
+    return;
+  }
+
+  if (!config.duffelApiKey) {
+    throw new Error("DUFFEL_API_KEY is required when FLIGHT_PROVIDER=duffel");
+  }
+
+  const isTestKey = config.duffelApiKey.startsWith("duffel_test_");
+  const isLiveKey = config.duffelApiKey.startsWith("duffel_live_");
+
+  if (config.duffelEnv === "live" && isTestKey) {
+    console.warn("[config] WARNING: DUFFEL_ENV=live but API key appears to be a test key.");
+  }
+
+  if (config.duffelEnv === "sandbox" && isLiveKey) {
+    console.warn("[config] WARNING: DUFFEL_ENV=sandbox but API key appears to be a live key.");
+  }
 }
 
 export function loadConfig(): AppConfig {
@@ -30,6 +52,7 @@ export function loadConfig(): AppConfig {
     duffelApiKey: process.env.DUFFEL_API_KEY ?? "",
     duffelEnv: process.env.DUFFEL_ENV === "live" ? "live" : "sandbox",
     duffelBaseUrl: process.env.DUFFEL_BASE_URL ?? "https://api.duffel.com",
+    apiKey: process.env.API_KEY ?? "",
     defaultCurrency: process.env.DEFAULT_CURRENCY ?? "USD",
     defaultLocale: process.env.DEFAULT_LOCALE ?? "en-US",
     defaultMaxResults: parseNumber(process.env.DEFAULT_MAX_RESULTS, 20),

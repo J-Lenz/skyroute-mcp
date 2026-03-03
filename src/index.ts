@@ -2,11 +2,13 @@ import express from "express";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { z } from "zod";
-import { loadConfig } from "./config";
+import { loadConfig, validateConfig } from "./config";
+import { createBearerAuth } from "./middleware/auth";
 import { createIpRateLimiter } from "./middleware/rateLimit";
 import { SkyRouteService } from "./skyroute";
 
 const config = loadConfig();
+validateConfig(config);
 const service = new SkyRouteService(config);
 
 function createServer(): McpServer {
@@ -122,8 +124,9 @@ const rateLimiter = createIpRateLimiter({
   windowMs: config.rateLimitWindowMs,
   maxRequests: config.rateLimitMaxRequests
 });
-app.use("/sse", rateLimiter);
-app.use("/messages", rateLimiter);
+const bearerAuth = createBearerAuth({ apiKey: config.apiKey });
+app.use("/sse", rateLimiter, bearerAuth);
+app.use("/messages", rateLimiter, bearerAuth);
 
 app.get("/health", (_req, res) => {
   res.json({
@@ -165,7 +168,9 @@ app.post("/messages", async (req, res) => {
 });
 
 app.listen(config.port, () => {
+  const authStatus = config.apiKey ? "enabled" : "disabled";
+  const envLabel = config.provider === "duffel" ? `, env=${config.duffelEnv}` : "";
   console.log(
-    `SkyRoute MCP listening on port ${config.port} (provider=${config.provider}). SSE endpoint: ${config.mcpBaseUrl}/sse`
+    `SkyRoute MCP listening on port ${config.port} (provider=${config.provider}${envLabel}, auth=${authStatus}). SSE endpoint: ${config.mcpBaseUrl}/sse`
   );
 });

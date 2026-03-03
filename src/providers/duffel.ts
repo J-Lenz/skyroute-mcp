@@ -38,7 +38,15 @@ interface DuffelOffer {
       operating_carrier_flight_number?: string;
     }>;
   }>;
-  conditions?: any;
+  conditions?: DuffelConditions;
+}
+
+interface DuffelConditions {
+  change_before_departure?: { allowed?: boolean; penalty_amount?: string; penalty_currency?: string };
+  change_after_departure?: { allowed?: boolean; penalty_amount?: string; penalty_currency?: string };
+  refund_before_departure?: { allowed?: boolean; penalty_amount?: string; penalty_currency?: string };
+  refund_after_departure?: { allowed?: boolean; penalty_amount?: string; penalty_currency?: string };
+  no_show?: { allowed?: boolean };
 }
 
 export class DuffelFlightProvider implements FlightProvider {
@@ -100,15 +108,35 @@ export class DuffelFlightProvider implements FlightProvider {
   }
 
   private async request<T>(method: "GET" | "POST", path: string, body?: unknown): Promise<T> {
-    const response = await fetch(`${this.baseUrl}${path}`, {
-      method,
-      headers: {
-        Authorization: `Bearer ${this.apiKey}`,
-        "Content-Type": "application/json",
-        "Duffel-Version": "v2"
-      },
-      body: body ? JSON.stringify(body) : undefined
-    });
+    return this.requestWithRetry<T>(method, path, body, 1);
+  }
+
+  private async requestWithRetry<T>(method: "GET" | "POST", path: string, body: unknown, retriesLeft: number): Promise<T> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30_000);
+
+    let response: Response;
+    try {
+      response = await fetch(`${this.baseUrl}${path}`, {
+        method,
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+          "Content-Type": "application/json",
+          "Duffel-Version": "v2"
+        },
+        body: body ? JSON.stringify(body) : undefined,
+        signal: controller.signal
+      });
+    } catch (err: any) {
+      clearTimeout(timeout);
+      if (err?.name === "AbortError") {
+        console.error(`[duffel] ${method} ${path}: request timed out after 30s`);
+        throw new Error(`Duffel API timeout: ${method} ${path}`);
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeout);
+    }
 
     const raw = await response.text();
     let payload: any = {};
@@ -116,12 +144,20 @@ export class DuffelFlightProvider implements FlightProvider {
       try {
         payload = JSON.parse(raw) as any;
       } catch {
+        console.warn(`[duffel] ${method} ${path}: response was not valid JSON (${raw.length} bytes)`);
         payload = {};
       }
     }
 
     if (!response.ok) {
       const message = payload?.errors?.[0]?.message || payload?.message || raw || "Unknown Duffel error";
+      console.error(`[duffel] ${method} ${path} failed (${response.status}): ${message}`);
+
+      if (retriesLeft > 0 && response.status >= 500 && response.status <= 504) {
+        await new Promise((resolve) => setTimeout(resolve, 1_000));
+        return this.requestWithRetry<T>(method, path, body, retriesLeft - 1);
+      }
+
       throw new Error(`Duffel API error (${response.status}): ${message}`);
     }
 
@@ -155,6 +191,12 @@ export class DuffelFlightProvider implements FlightProvider {
 
   private mapOffer(offer: DuffelOffer, input: NormalizedSearchInput): FlightOffer | undefined {
     if (!offer || !offer.id) {
+      return undefined;
+    }
+
+    const amount = offer.total_amount;
+    if (!amount || parseFloat(amount) <= 0) {
+      console.warn(`[duffel] Skipping offer ${offer.id}: missing or zero price`);
       return undefined;
     }
 
@@ -202,7 +244,7 @@ export class DuffelFlightProvider implements FlightProvider {
       stops: Math.max(0, segments.length - 1),
       cabinClass: input.cabinClass,
       price: {
-        amount: offer.total_amount ?? "0.00",
+        amount: amount,
         currency: offer.total_currency ?? input.currency
       },
       baggage: {
@@ -216,7 +258,7 @@ export class DuffelFlightProvider implements FlightProvider {
     };
   }
 
-  private inferFareType(conditions: any): string {
+  private inferFareType(conditions: DuffelConditions | undefined): string {
     const changeAllowed = conditions?.change_before_departure?.allowed;
     const refundAllowed = conditions?.refund_before_departure?.allowed;
 
@@ -231,7 +273,7 @@ export class DuffelFlightProvider implements FlightProvider {
     return "basic";
   }
 
-  private mapConditions(conditions: any): FlightDetails["conditions"] {
+  private mapConditions(conditions: DuffelConditions | undefined): FlightDetails["conditions"] {
     const cancellation = this.ruleSummary("Cancellation", conditions?.refund_before_departure, conditions?.refund_after_departure);
     const changes = this.ruleSummary("Changes", conditions?.change_before_departure, conditions?.change_after_departure);
 
@@ -249,7 +291,7 @@ export class DuffelFlightProvider implements FlightProvider {
     };
   }
 
-  private ruleSummary(label: string, before: any, after: any): string {
+  private ruleSummary(label: string, before: { allowed?: boolean; penalty_amount?: string; penalty_currency?: string } | undefined, after: { allowed?: boolean; penalty_amount?: string; penalty_currency?: string } | undefined): string {
     const beforeSummary = this.singleRuleSummary("before departure", before);
     const afterSummary = this.singleRuleSummary("after departure", after);
 
@@ -260,7 +302,7 @@ export class DuffelFlightProvider implements FlightProvider {
     return [beforeSummary, afterSummary].filter(Boolean).join(" ");
   }
 
-  private singleRuleSummary(windowLabel: string, rule: any): string {
+  private singleRuleSummary(windowLabel: string, rule: { allowed?: boolean; penalty_amount?: string; penalty_currency?: string } | undefined): string {
     if (!rule || typeof rule.allowed !== "boolean") {
       return "";
     }
