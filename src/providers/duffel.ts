@@ -99,10 +99,13 @@ export class DuffelFlightProvider implements FlightProvider {
     });
 
     const offers = Array.isArray(offerRequest.offers) ? offerRequest.offers : [];
-    return offers
-      .map((offer) => this.mapOffer(offer, input))
-      .filter((offer): offer is FlightOffer => Boolean(offer))
-      .slice(0, input.maxResults);
+    const mappedOffers = offers
+      .map((offer) => ({ raw: offer, mapped: this.mapOffer(offer, input) }))
+      .filter((entry): entry is { raw: DuffelOffer; mapped: FlightOffer } => Boolean(entry.mapped));
+
+    const cabinFilteredOffers = mappedOffers.filter((entry) => this.matchesRequestedCabinClass(entry.raw, input.cabinClass));
+
+    return cabinFilteredOffers.map((entry) => entry.mapped).slice(0, input.maxResults);
   }
 
   async getConditions(offer: FlightOffer): Promise<FlightDetails["conditions"]> {
@@ -301,21 +304,63 @@ export class DuffelFlightProvider implements FlightProvider {
     };
   }
 
+  private matchesRequestedCabinClass(offer: DuffelOffer, requestedCabinClass: NormalizedSearchInput["cabinClass"]): boolean {
+    const declaredCabins = this.extractDeclaredCabinClasses(offer);
+
+    if (declaredCabins.length === 0) {
+      console.warn(`[duffel] Skipping offer ${offer.id ?? "unknown"}: missing cabin_class in response`);
+      return false;
+    }
+
+    const exactMatch = declaredCabins.every((cabinClass) => cabinClass === requestedCabinClass);
+    if (!exactMatch) {
+      console.warn(
+        `[duffel] Skipping offer ${offer.id ?? "unknown"}: cabin mismatch (requested=${requestedCabinClass}, got=${declaredCabins.join(",")})`
+      );
+      return false;
+    }
+
+    return true;
+  }
+
+  private extractDeclaredCabinClasses(offer: DuffelOffer): NormalizedSearchInput["cabinClass"][] {
+    const cabins = new Set<NormalizedSearchInput["cabinClass"]>();
+
+    for (const slice of offer.slices ?? []) {
+      for (const segment of slice.segments ?? []) {
+        for (const passenger of segment.passengers ?? []) {
+          const normalized = this.normalizeDuffelCabinClass(passenger.cabin_class);
+          if (normalized) {
+            cabins.add(normalized);
+          }
+        }
+      }
+    }
+
+    return [...cabins];
+  }
+
   private extractCabinClass(
     segment: { passengers?: Array<{ cabin_class?: string }> } | undefined,
     fallback: NormalizedSearchInput["cabinClass"]
   ): NormalizedSearchInput["cabinClass"] {
-    const rawCabin = segment?.passengers?.[0]?.cabin_class;
-    if (!rawCabin) {
+    const normalized = this.normalizeDuffelCabinClass(segment?.passengers?.[0]?.cabin_class);
+    if (!normalized) {
       return fallback;
     }
+    return normalized;
+  }
 
-    const normalized = rawCabin.toLowerCase().replace(/[\s-]/g, "_");
+  private normalizeDuffelCabinClass(value?: string): NormalizedSearchInput["cabinClass"] | undefined {
+    if (!value) {
+      return undefined;
+    }
+
+    const normalized = value.toLowerCase().replace(/[\s-]/g, "_");
     if (normalized === "economy" || normalized === "premium_economy" || normalized === "business" || normalized === "first") {
       return normalized;
     }
-
-    return fallback;
+    return undefined;
   }
 
   private inferFareType(conditions: DuffelConditions | undefined): string {
