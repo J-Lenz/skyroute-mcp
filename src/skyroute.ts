@@ -27,6 +27,8 @@ export interface SearchFlightsRequest {
   children?: number;
   infants?: number;
   cabin_class?: CabinClass;
+  cabinClass?: CabinClass;
+  cabin?: CabinClass;
   currency?: string;
   locale?: string;
   max_results?: number;
@@ -116,6 +118,7 @@ export class SkyRouteService {
     });
 
     const maxResults = this.normalizeMaxResults(request.max_results);
+    const cabinClass = request.cabin_class ?? request.cabinClass ?? request.cabin ?? "economy";
 
     const normalizedInput: NormalizedSearchInput = {
       origin: originResult.airport,
@@ -123,7 +126,7 @@ export class SkyRouteService {
       departureDate,
       returnDate,
       passengers,
-      cabinClass: request.cabin_class ?? "economy",
+      cabinClass,
       currency: (request.currency ?? this.config.defaultCurrency).toUpperCase(),
       locale: request.locale ?? this.config.defaultLocale,
       maxResults,

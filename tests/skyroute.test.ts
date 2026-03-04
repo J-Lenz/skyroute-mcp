@@ -84,6 +84,28 @@ describe("SkyRouteService", () => {
       expect(result.request.departureDate).toBe("2025-06-15");
     });
 
+    it("accepts camelCase cabin alias", async () => {
+      const result = await service.searchFlights({
+        origin: "SFO",
+        destination: "LIS",
+        departure_date: "2025-06-15",
+        cabinClass: "business"
+      });
+
+      expect(result.request.cabinClass).toBe("business");
+    });
+
+    it("accepts short cabin alias", async () => {
+      const result = await service.searchFlights({
+        origin: "SFO",
+        destination: "LIS",
+        departure_date: "2025-06-15",
+        cabin: "first"
+      });
+
+      expect(result.request.cabinClass).toBe("first");
+    });
+
     it("throws for invalid origin", async () => {
       await expect(
         service.searchFlights({

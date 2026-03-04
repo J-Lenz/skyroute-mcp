@@ -99,6 +99,17 @@ describe("DuffelFlightProvider", () => {
       expect(offer.cabinClass).toBe("economy");
     });
 
+    it("passes requested cabin class to Duffel offer request payload", async () => {
+      const provider = new DuffelFlightProvider({ apiKey: "duffel_test_abc", baseUrl: "https://api.duffel.com" });
+      fetchSpy.mockResolvedValue(makeDuffelOfferResponse([makeDuffelOffer()]) as any);
+
+      await provider.searchFlights(makeInput({ cabinClass: "business" }));
+
+      const [, requestInit] = fetchSpy.mock.calls[0] as [string, RequestInit];
+      const payload = JSON.parse(requestInit.body as string);
+      expect(payload.data.cabin_class).toBe("business");
+    });
+
     it("extracts cabin class from Duffel response", async () => {
       const provider = new DuffelFlightProvider({ apiKey: "duffel_test_abc", baseUrl: "https://api.duffel.com" });
       const businessOffer = makeDuffelOffer({

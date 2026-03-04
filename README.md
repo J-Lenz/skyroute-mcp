@@ -125,6 +125,7 @@ Input:
 - `return_date` (optional)
 - `adults`, `children`, `infants` (optional)
 - `cabin_class` (`economy|premium_economy|business|first`, optional)
+- `cabinClass` / `cabin` (aliases for `cabin_class`, optional)
 - `currency`, `locale`, `max_results`, `sort` (optional)
 
 Output includes:

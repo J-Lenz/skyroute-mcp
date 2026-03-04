@@ -58,6 +58,14 @@ function createServer(): McpServer {
       children: z.number().int().min(0).max(8).optional().describe("Number of child passengers. Default 0."),
       infants: z.number().int().min(0).max(8).optional().describe("Number of infant passengers. Default 0."),
       cabin_class: z.enum(["economy", "premium_economy", "business", "first"]).optional(),
+      cabinClass: z
+        .enum(["economy", "premium_economy", "business", "first"])
+        .optional()
+        .describe("Alias for cabin_class (camelCase compatibility)."),
+      cabin: z
+        .enum(["economy", "premium_economy", "business", "first"])
+        .optional()
+        .describe("Alias for cabin_class."),
       currency: z.string().length(3).optional().describe("ISO currency code, e.g. USD."),
       locale: z.string().optional().describe("Locale tag, e.g. en-US."),
       max_results: z.number().int().min(1).max(50).optional(),
