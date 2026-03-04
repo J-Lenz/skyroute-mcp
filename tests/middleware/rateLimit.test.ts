@@ -10,6 +10,14 @@ function mockReq(ip: string): Partial<Request> {
   };
 }
 
+function mockReqWithSpoofedHeader(realIp: string, spoofedForwardedFor: string): Partial<Request> {
+  return {
+    headers: { "x-forwarded-for": spoofedForwardedFor },
+    ip: realIp,
+    socket: { remoteAddress: realIp } as any
+  };
+}
+
 function mockRes(): Partial<Response> & { statusCode: number; headers: Record<string, string>; body: any } {
   const res: any = {
     statusCode: 200,
@@ -95,5 +103,17 @@ describe("createIpRateLimiter", () => {
     const res3 = mockRes();
     limiter(mockReq("1.1.1.1") as Request, res3 as unknown as Response, vi.fn());
     expect(res3.statusCode).toBe(429);
+  });
+
+  it("uses req.ip instead of spoofed x-forwarded-for header", () => {
+    const limiter = createIpRateLimiter({ windowMs: 60_000, maxRequests: 1 });
+
+    const next1 = vi.fn();
+    limiter(mockReqWithSpoofedHeader("9.9.9.9", "1.2.3.4") as Request, mockRes() as unknown as Response, next1);
+    expect(next1).toHaveBeenCalled();
+
+    const res2 = mockRes();
+    limiter(mockReqWithSpoofedHeader("9.9.9.9", "5.6.7.8") as Request, res2 as unknown as Response, vi.fn());
+    expect(res2.statusCode).toBe(429);
   });
 });

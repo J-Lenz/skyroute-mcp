@@ -11,15 +11,8 @@ interface Bucket {
 }
 
 function getClientIp(req: Request): string {
-  const forwarded = req.headers["x-forwarded-for"];
-  if (typeof forwarded === "string" && forwarded.length > 0) {
-    return forwarded.split(",")[0].trim();
-  }
-
-  if (Array.isArray(forwarded) && forwarded.length > 0) {
-    return forwarded[0].trim();
-  }
-
+  // Rely on Express trusted proxy resolution (`req.ip`) instead of raw headers.
+  // This avoids clients bypassing limits by spoofing x-forwarded-for directly.
   return req.ip || req.socket.remoteAddress || "unknown";
 }
 
@@ -27,10 +20,26 @@ export function createIpRateLimiter(options: RateLimitOptions): RequestHandler {
   const buckets = new Map<string, Bucket>();
   const windowMs = Math.max(1_000, options.windowMs);
   const maxRequests = Math.max(1, options.maxRequests);
+  let requestsSinceSweep = 0;
+
+  function sweepExpired(now: number): void {
+    for (const [ip, bucket] of buckets.entries()) {
+      if (now >= bucket.resetAt) {
+        buckets.delete(ip);
+      }
+    }
+  }
 
   return (req, res, next) => {
     const ip = getClientIp(req);
     const now = Date.now();
+    requestsSinceSweep += 1;
+
+    // Opportunistic sweep keeps memory bounded without timers.
+    if (requestsSinceSweep >= 200) {
+      sweepExpired(now);
+      requestsSinceSweep = 0;
+    }
 
     const existing = buckets.get(ip);
     if (!existing || now >= existing.resetAt) {
