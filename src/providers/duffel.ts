@@ -1,3 +1,4 @@
+import { sanitizeResponseString } from "../services/sanitize";
 import { BookingSession, FlightDetails, FlightOffer, FlightProvider, NormalizedSearchInput } from "../types";
 
 export interface DuffelLinksConfig {
@@ -257,20 +258,25 @@ export class DuffelFlightProvider implements FlightProvider {
       this.durationBetween(departureAt, arrivalAt) ??
       0;
 
-    const airline =
+    const airline = sanitizeResponseString(
       offer.owner?.name ||
       firstSegment?.marketing_carrier?.name ||
       firstSegment?.operating_carrier?.name ||
-      "Unknown airline";
+      "",
+      "Unknown airline"
+    ) || "Unknown airline";
 
-    const airlineCode =
+    const airlineCode = sanitizeResponseString(
       offer.owner?.iata_code ||
       firstSegment?.marketing_carrier?.iata_code ||
       firstSegment?.operating_carrier?.iata_code ||
-      "XX";
+      "",
+      "XX"
+    ) || "XX";
 
-    const flightNumberSuffix =
-      firstSegment?.marketing_carrier_flight_number || firstSegment?.operating_carrier_flight_number || "";
+    const flightNumberSuffix = sanitizeResponseString(
+      firstSegment?.marketing_carrier_flight_number || firstSegment?.operating_carrier_flight_number || ""
+    );
     const flightNumber = `${airlineCode}${flightNumberSuffix}`.trim() || "N/A";
 
     const bookingRedirectUrl = this.buildBookingRedirectUrl(input);
@@ -390,9 +396,9 @@ export class DuffelFlightProvider implements FlightProvider {
         : "No-show policy depends on airline fare rules.";
 
     return {
-      cancellation,
-      changes,
-      noShow
+      cancellation: sanitizeResponseString(cancellation, "Cancellation policy depends on airline fare rules."),
+      changes: sanitizeResponseString(changes, "Changes policy depends on airline fare rules."),
+      noShow: sanitizeResponseString(noShow, "No-show policy depends on airline fare rules.")
     };
   }
 

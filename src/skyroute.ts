@@ -6,6 +6,7 @@ import { OfferCache } from "./services/cache";
 import { isValidDateOrder, toIsoDate } from "./services/dates";
 import { stableId } from "./services/id";
 import { rankOffers } from "./services/ranking";
+import { sanitizeCurrency, sanitizeId, sanitizeTextInput } from "./services/sanitize";
 import {
   BookingRedirect,
   CabinClass,
@@ -76,6 +77,9 @@ export class SkyRouteService {
   }
 
   async searchFlights(request: SearchFlightsRequest): Promise<SearchResult> {
+    // --- Input hardening: sanitize all agent-provided strings ---
+    request = this.sanitizeSearchRequest(request);
+
     const notes: string[] = [];
 
     const originResult = resolveAirport(request.origin);
@@ -201,6 +205,7 @@ export class SkyRouteService {
   }
 
   async getFlightDetails(request: GetDetailsRequest): Promise<FlightDetails> {
+    request = { search_id: sanitizeId(request.search_id), offer_id: sanitizeId(request.offer_id) };
     const offer = this.mustGetOffer(request.search_id, request.offer_id);
     const conditions = await this.provider.getConditions(offer);
 
@@ -229,6 +234,7 @@ export class SkyRouteService {
   }
 
   async bookFlight(request: BookFlightRequest): Promise<BookingRedirect> {
+    request = { search_id: sanitizeId(request.search_id), offer_id: sanitizeId(request.offer_id) };
     const offer = this.mustGetOffer(request.search_id, request.offer_id);
 
     let bookingUrl = offer.bookingRedirectUrl;
@@ -276,6 +282,19 @@ export class SkyRouteService {
 
   private clampInt(value: number, min: number, max: number): number {
     return Math.min(max, Math.max(min, Math.floor(value)));
+  }
+
+  private sanitizeSearchRequest(req: SearchFlightsRequest): SearchFlightsRequest {
+    return {
+      ...req,
+      origin: sanitizeTextInput(req.origin),
+      destination: sanitizeTextInput(req.destination),
+      departure_date: req.departure_date ? sanitizeTextInput(req.departure_date) : undefined,
+      date: req.date ? sanitizeTextInput(req.date) : undefined,
+      return_date: req.return_date ? sanitizeTextInput(req.return_date) : undefined,
+      currency: req.currency ? sanitizeCurrency(req.currency) : undefined,
+      locale: req.locale ? sanitizeTextInput(req.locale) : undefined
+    };
   }
 
   private mustGetOffer(searchId: string, offerId: string): FlightOffer {
