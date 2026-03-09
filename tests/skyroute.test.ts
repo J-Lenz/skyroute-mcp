@@ -39,7 +39,7 @@ describe("SkyRouteService", () => {
     it("returns provider and airport count", () => {
       const meta = service.getMeta();
       expect(meta.provider).toBe("mock");
-      expect(meta.supportedAirports).toBe(70);
+      expect(meta.supportedAirports).toBe(402);
       expect(meta.cacheTtlMs).toBe(30 * 60 * 1000);
     });
   });
