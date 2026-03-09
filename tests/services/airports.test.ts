@@ -75,6 +75,6 @@ describe("resolveAirport", () => {
 
 describe("supportedAirportsCount", () => {
   it("returns the correct airport count", () => {
-    expect(supportedAirportsCount()).toBe(402);
+    expect(supportedAirportsCount()).toBe(742);
   });
 });

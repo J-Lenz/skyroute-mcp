@@ -89,7 +89,7 @@ search_flights  -->  get_flight_details  -->  book_flight
 
 ## Supported Airports
 
-402 airports are currently supported across all continents — Europe, North
+742 airports are currently supported across all continents — Europe, North
 America, South America, Africa, Middle East, Asia, and Oceania.  If an
 airport is not recognized, the error message will suggest nearby
 alternatives when possible.
